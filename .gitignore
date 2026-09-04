@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Environment & secrets (NEVER commit these)
+.env
+.env.local
+*.key
+*.pem
+auth.json
+config/local.json
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Test output
+coverage/
+.nyc_output/
+
+# OS junk
+desktop.ini
+$RECYCLE.BIN/
+
+# Local config & caches
+.cache/
+.tmp/

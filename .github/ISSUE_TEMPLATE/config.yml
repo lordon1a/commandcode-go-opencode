@@ -1,0 +1,15 @@
+name: Issue triage
+about: How to get your issue handled faster
+title: ""
+labels: []
+assignees: []
+
+# Disable blank issues and require one of the templates above.
+blank_issues_enabled: false
+
+# Auto-respond to the "my account was suspended" template by pointing users
+# at support@commandcode.ai. The maintainers cannot help with suspensions.
+contact_links:
+  - name: Command Code support
+    url: mailto:support@commandcode.ai
+    about: The only channel that can act on account suspensions.
