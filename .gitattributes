@@ -1,0 +1,36 @@
+# Force consistent line endings so contributors on Windows, macOS and Linux
+# don't fight over CRLF. The default behaviour is to leave line endings
+# alone per-platform, which leads to noisy diffs and "LF will be replaced
+# by CRLF" warnings. We pick LF universally except for a few Windows-only
+# formats that have hard requirements.
+
+# Auto-detect text files and normalise to LF in the index.
+*               text=auto eol=lf
+
+# Force LF for shell scripts (Bash on Windows, macOS and Linux all want
+# LF; CRLF breaks `bash script.sh` on every platform).
+*.sh            text eol=lf
+*.bash          text eol=lf
+
+# TypeScript, JavaScript, JSON, YAML, Markdown — LF everywhere.
+*.ts            text eol=lf
+*.tsx           text eol=lf
+*.js            text eol=lf
+*.cjs           text eol=lf
+*.mjs           text eol=lf
+*.json          text eol=lf
+*.jsonc         text eol=lf
+*.yaml          text eol=lf
+*.yml           text eol=lf
+*.md            text eol=lf
+
+# PowerShell scripts: Windows convention is CRLF, and PS 5.1 (still the
+# default on Windows 10) misparses pure-LF on a few builtins. Use CRLF.
+*.ps1           text eol=crlf
+*.psm1          text eol=crlf
+
+# Generated artefacts: leave line endings alone (npm/Yarn may write CRLF
+# on Windows runners and that's fine — they're not edited by hand).
+package-lock.json   -text merge=binary
+dist/**             -text merge=binary
+node_modules/**     -text merge=binary
