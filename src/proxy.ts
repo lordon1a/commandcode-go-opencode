@@ -159,7 +159,7 @@ function handleChatCompletions(upstream: UpstreamClient) {
       messages,
       maxTokens: body.max_tokens,
       reasoningEffort: normaliseEffort(body.reasoning_effort),
-      signal: clientAbortSignal(req),
+      signal: clientAbortSignal(req, res),
     };
 
     if (!wantsStream) {
@@ -356,7 +356,7 @@ function handleAnthropicMessages(upstream: UpstreamClient) {
       model: model.upstreamId,
       messages,
       maxTokens: body.max_tokens,
-      signal: clientAbortSignal(req),
+      signal: clientAbortSignal(req, res),
     };
 
     if (!wantsStream) {
@@ -607,13 +607,20 @@ function respondAnthropicError(err: unknown, res: Response): void {
  * Express doesn't expose `req.signal` on the base Request. We adapt the
  * client's disconnect event into an AbortSignal so we can cancel the
  * upstream fetch when the client goes away mid-stream.
+ *
+ * NOTE: listen on the *response*, not the request. `req` 'close' fires as
+ * soon as the request body is fully received — aborting on it cancels every
+ * normal request immediately ("This operation was aborted"). `res` 'close'
+ * with !writableFinished means the client actually went away mid-response.
  */
-function clientAbortSignal(req: Request): AbortSignal {
+function clientAbortSignal(req: Request, res: Response): AbortSignal {
   const controller = new AbortController();
   if (req.aborted) {
     controller.abort();
   } else {
-    req.on("close", () => controller.abort());
+    res.on("close", () => {
+      if (!res.writableFinished) controller.abort();
+    });
   }
   return controller.signal;
 }

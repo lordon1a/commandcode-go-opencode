@@ -20,7 +20,15 @@ describe("renderOpenCodeConfig", () => {
 
   it("uses the openai-compatible package", () => {
     const cfg = renderOpenCodeConfig();
-    expect(cfg).toContain("@opencode-ai/ai/providers/openai-compatible");
+    expect(cfg).toContain("@ai-sdk/openai-compatible");
+  });
+
+  it("uses the current provider schema", () => {
+    const cfg = JSON.parse(stripComments(renderOpenCodeConfig()));
+    expect(cfg.provider["commandcode-go"].options.baseURL).toBe(
+      "http://127.0.0.1:8787/v1"
+    );
+    expect(cfg.providers).toBeUndefined();
   });
 
   it("includes the Go plan flagship models", () => {

@@ -1,9 +1,13 @@
 /**
  * Generate an OpenCode provider config block that points at the local proxy.
  *
- * The block is appended to (or, if missing, inserted into) the user's
- * `opencode.jsonc`. We never overwrite other providers — we only add or
- * replace the `commandcode-go` entry by id.
+ * OpenCode ≥1.x expects the singular `provider` map with `npm` + `options`
+ * (see https://opencode.ai/docs/providers/#custom-provider). Older versions
+ * of this tool wrote the legacy `providers` + `package` + `settings` shape;
+ * writeOpenCodeConfig migrates those entries forward.
+ *
+ * The block is merged into the user's `opencode.jsonc`. We never overwrite
+ * other providers — we only add or replace the `commandcode-go` entry by id.
  */
 import { promises as fs } from "node:fs";
 import { homedir } from "node:os";
@@ -20,11 +24,11 @@ const PROVIDER_ID = "commandcode-go";
 
 const TEMPLATE = `{
   "$schema": "https://opencode.ai/config.json",
-  "providers": {
+  "provider": {
     "${PROVIDER_ID}": {
+      "npm": "@ai-sdk/openai-compatible",
       "name": "Command Code (Go, via bridge)",
-      "package": "@opencode-ai/ai/providers/openai-compatible",
-      "settings": {
+      "options": {
         "baseURL": "http://127.0.0.1:8787/v1",
         "apiKey": "proxy-managed"
       },
@@ -76,13 +80,21 @@ export async function writeOpenCodeConfig(content: string): Promise<string> {
     string,
     unknown
   >;
-  const providers = (existing.providers as Record<string, unknown> | undefined) ?? {};
-  const newProviders = (next.providers as Record<string, unknown>) ?? {};
+  // Current schema uses singular `provider`; migrate any legacy `providers`
+  // entries (package/settings shape) forward so OpenCode ≥1.x picks them up.
+  const provider = (existing.provider as Record<string, unknown> | undefined) ?? {};
+  const legacy = (existing.providers as Record<string, unknown> | undefined) ?? {};
+  for (const [k, v] of Object.entries(legacy)) {
+    if (!(k in provider)) provider[k] = migrateLegacyProvider(v);
+  }
+  if (Object.keys(legacy).length > 0) delete existing.providers;
+  const newProviders =
+    ((next.provider ?? next.providers) as Record<string, unknown>) ?? {};
   // Replace just our slot; leave other providers untouched.
   for (const k of Object.keys(newProviders)) {
-    providers[k] = newProviders[k];
+    provider[k] = newProviders[k];
   }
-  existing.providers = providers;
+  existing.provider = provider;
 
   // Preserve the user's `$schema` if they have one and we don't.
   if (!existing.$schema && next.$schema) {
@@ -104,6 +116,31 @@ export async function writeOpenCodeConfig(content: string): Promise<string> {
     await fs.rename(tmp, CONFIG_PATH);
   }
   return CONFIG_PATH;
+}
+
+/**
+ * Convert a pre-1.x provider entry ({package, settings, ...}) to the current
+ * {npm, options, ...} shape. Unknown fields pass through untouched.
+ */
+function migrateLegacyProvider(v: unknown): unknown {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return v;
+  const out: Record<string, unknown> = { ...(v as Record<string, unknown>) };
+  if (typeof out.package === "string" && out.npm === undefined) {
+    const pkg = out.package as string;
+    out.npm = pkg.includes("openai-compatible")
+      ? "@ai-sdk/openai-compatible"
+      : pkg;
+    delete out.package;
+  }
+  if (
+    out.settings !== undefined &&
+    typeof out.settings === "object" &&
+    out.options === undefined
+  ) {
+    out.options = out.settings;
+    delete out.settings;
+  }
+  return out;
 }
 
 /**
